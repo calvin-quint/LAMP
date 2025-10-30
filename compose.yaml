@@ -1,0 +1,44 @@
+services:
+  php:
+    build:
+      context: ./config/php
+      dockerfile: Dockerfile
+    container_name: php_fpm
+    restart: unless-stopped
+    volumes:
+      - ./web:/usr/local/apache2/htdocs
+      - ./config/php/www.conf:/usr/local/etc/php-fpm.d/www.conf:ro
+      - ./config/usr/local/etc/php/php.ini:/usr/local/etc/php-fpm.d/php.ini:ro
+    command: ["php-fpm", "-F"]
+
+  httpd:
+    image: httpd:2.4
+    container_name: apache_web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "4137:4137"
+    volumes:
+      - ./web:/usr/local/apache2/htdocs
+      - ./config/apache/httpd.conf:/usr/local/apache2/conf/httpd.conf:ro
+      - ./config/apache/conf.d:/usr/local/apache2/conf/conf.d:ro
+      - ./config/certificates:/usr/local/apache2/conf/certs:ro
+      - ./logs/httpd:/var/log/httpd
+    depends_on:
+      - php
+      - db
+
+  db:
+    image: mariadb:11
+    container_name: mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - ./data/db:/var/lib/mysql
+    ports:
+      - "3306:3306"
